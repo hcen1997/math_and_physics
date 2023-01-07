@@ -23,7 +23,7 @@ ref_offset = -300
 
 
 def plot_ref_line():
-    plt.figure(figsize=(7, 6))
+    plt.figure(figsize=(7, 6), )
     plt.axes([0.12, 0.11, 0.90 / 2, 0.88])
     plt.vlines(ref_offset, 0, ref_h, 'blue', ':', "垂直两米参考线")
     plt.hlines(ref_offset, 0, ref_x, 'black', ':', "水平1米参考线")
@@ -50,22 +50,52 @@ def plot_body():
     leg_base = plt.Circle(leg_base_xy, 30, linestyle='-', fill=True, color='red')
     plt.gcf().gca().add_patch(leg_base)
 
+leg_center_angle = pi
+leg_front_limit = pi/6
+leg_back_limit = -pi/12
 # 大腿长
-leg1_length = 180
+leg1_length = 600
+leg1_keen_xy = None
+
+
 def plot_leg11():
     global leg_base_xy
-    theta = -pi/6
-    leg_xy_00 = [sin(theta)*leg1_length,cos(theta)*leg1_length]
+    # 向上为正
+    theta = leg_center_angle + leg_front_limit
+    leg_xy_00 = [sin(theta) * leg1_length, cos(theta) * leg1_length]
     leg_xy_00 = np.array(leg_xy_00)
     lb = np.array(leg_base_xy)
     # 4个值 两个点
     from matplotlib import collections
-    line = [leg_base_xy,leg_xy_00+lb]
-    leg11 = collections.LineCollection([line])
+    line = [leg_base_xy, leg_xy_00 + lb]
+    leg11 = collections.LineCollection([line], colors='orange')
     plt.gcf().gca().add_collection(leg11)
+    global leg1_keen_xy
+    leg1_keen_xy = leg_xy_00 + lb
+
+
+leg2_keen_xy = None
+
+
+def plot_leg21():
+    global leg_base_xy
+    # 向上为正
+    theta = leg_center_angle+leg_back_limit
+    leg_xy_00 = [sin(theta) * leg1_length, cos(theta) * leg1_length]
+    leg_xy_00 = np.array(leg_xy_00)
+    lb = np.array(leg_base_xy)
+    # 4个值 两个点
+    from matplotlib import collections
+    line = [leg_base_xy, leg_xy_00 + lb]
+    leg11 = collections.LineCollection([line],colors='cyan')
+    plt.gcf().gca().add_collection(leg11)
+    global leg2_keen_xy
+    leg2_keen_xy = leg_xy_00 + lb
+
 
 if __name__ == '__main__':
     plot_ref_line()
     plot_body()
     plot_leg11()
+    plot_leg21()
     plt.show()
