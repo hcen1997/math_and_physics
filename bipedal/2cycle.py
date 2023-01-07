@@ -85,16 +85,11 @@ def plot_line(line,color):
 
 
 def plot_leg21(dtheta=0):
-    # 向上为正
     theta = state.leg_center_angle + state.leg_back_limit + dtheta
     leg_xy_00 = [sin(theta) * state.leg1_length, cos(theta) * state.leg1_length]
     leg_xy_00 = np.array(leg_xy_00)
     lb = np.array(state.leg_base_xy)
-    # 4个值 两个点
-
-    line = [state.leg_base_xy, leg_xy_00 + lb]
-    leg11 = collections.LineCollection([line], colors='cyan')
-    plt.gcf().gca().add_collection(leg11)
+    plot_line([state.leg_base_xy, leg_xy_00 + lb],'cyan')
     state.leg2_keen_xy = leg_xy_00 + lb
     state.leg21_theta = theta
 
@@ -117,7 +112,7 @@ def gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt, ctl_dtheta_sig,
 
 
 def plot_leg12(dtheta):
-    pass
+    plot_line([state.leg1_keen_xy,(200,200)],'orange')
 
 
 def job_print_robot_walk():
@@ -168,7 +163,7 @@ def job_print_robot_walk():
         # plot_leg22(0)
         # todo: 最少需要多少个连杆呢?
         # 先写到legx3看看吧
-        # plt.pause(dt)
+        plt.pause(dt)
     plt.show()
 
 
