@@ -27,10 +27,17 @@ class State:  # python: class 是个框, 啥都往里装 就是
         self.leg_back_limit = -pi / 12
         # 大腿长
         self.leg1_length = 600
-        self.leg1_keen_xy = None
+        self.leg1_knee_xy = None
         self.leg11_theta = None
-        self.leg2_keen_xy = None
+        self.leg2_knee_xy = None
         self.leg21_theta = None
+
+        # 小腿长
+        self.leg2_length = 500
+        self.leg1_ankle_xy = None
+        self.leg12_theta = None
+        self.leg2_ankle_xy = None
+        self.leg22_theta = None
 
 
 state = State()
@@ -66,7 +73,7 @@ def plot_body():
     plt.gcf().gca().add_patch(leg_base)
 
 
-# python 支持 state.leg1_keen_xy  的写法, 但是不建议 因为为了统一信息来源
+# python 支持 state.leg1_knee_xy  的写法, 但是不建议 因为为了统一信息来源
 
 def plot_leg11(dtheta=0):
     # 向上为正
@@ -74,12 +81,12 @@ def plot_leg11(dtheta=0):
     leg_xy_00 = [sin(theta) * state.leg1_length, cos(theta) * state.leg1_length]
     leg_xy_00 = np.array(leg_xy_00)
     lb = np.array(state.leg_base_xy)
-    plot_line([state.leg_base_xy, leg_xy_00 + lb],'orange')
-    state.leg1_keen_xy = leg_xy_00 + lb
+    plot_line([state.leg_base_xy, leg_xy_00 + lb], 'orange')
+    state.leg1_knee_xy = leg_xy_00 + lb
     state.leg11_theta = theta
 
 
-def plot_line(line,color):
+def plot_line(line, color):
     leg11 = collections.LineCollection([line], colors=color)
     plt.gcf().gca().add_collection(leg11)
 
@@ -89,8 +96,8 @@ def plot_leg21(dtheta=0):
     leg_xy_00 = [sin(theta) * state.leg1_length, cos(theta) * state.leg1_length]
     leg_xy_00 = np.array(leg_xy_00)
     lb = np.array(state.leg_base_xy)
-    plot_line([state.leg_base_xy, leg_xy_00 + lb],'cyan')
-    state.leg2_keen_xy = leg_xy_00 + lb
+    plot_line([state.leg_base_xy, leg_xy_00 + lb], 'cyan')
+    state.leg2_knee_xy = leg_xy_00 + lb
     state.leg21_theta = theta
 
 
@@ -111,8 +118,29 @@ def gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt, ctl_dtheta_sig,
     return ctl_dtheta_sig_arr
 
 
+"""
+画线子过程
+1. 基点
+2. plot_line([base, leg_xy_00 + base], <color_you_should_like>)
+"""
+
+
 def plot_leg12(dtheta):
-    plot_line([state.leg1_keen_xy,(200,200)],'orange')
+    # plot_line([state.leg1_knee_xy, (200, 200)], 'orange')
+
+    theta = state.leg_center_angle  # + state.leg_back_limit + dtheta
+    leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
+    state.leg1_ankle_xy = leg_xy_00 + np.array(state.leg1_knee_xy)
+    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], 'orange')  # 咦, 我只需要关心某些点就行了
+    state.leg12_theta = theta
+
+
+def plot_leg22(dtheta):
+    theta = state.leg_center_angle  # + state.leg_back_limit + dtheta
+    leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
+    state.leg2_ankle_xy = leg_xy_00 + np.array(state.leg2_knee_xy)
+    plot_line([state.leg2_knee_xy, state.leg2_ankle_xy], 'cyan')  # 咦, 我只需要关心某些点就行了
+    state.leg22_theta = theta
 
 
 def job_print_robot_walk():
@@ -156,16 +184,21 @@ def job_print_robot_walk():
         dtheta_leg12 = dtheta_leg12 + w * dt * ctl_dtheta_sig_in_period[1][current_index_in_control_arr]
         plot_leg21(dtheta_leg12)
         plt.text(-240, 1900, f'当前时间={t: 2.1f}秒')
-        print(f'当前时间 {t:.1f} 左膝盖xy {state.leg2_keen_xy} '
-              f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_keen_xy} 右大腿角 {state.leg21_theta}')
+        print(f'当前时间 {t:.1f} 左膝盖xy {state.leg2_knee_xy} '
+              f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
 
         plot_leg12(0)
-        # plot_leg22(0)
-        # todo: 最少需要多少个连杆呢?
-        # 先写到legx3看看吧
+        plot_leg22(0)
+        """
+        从模拟中可以看出, 只有2连杆的情况下, 足端到地面有一个 delta_height 
+        那么脚面的功能就的出来了, 补足这个 delta_height
+        同时因为 脚面的补足对于地面只是一个点/球
+        所以需要大拇指来产生一个随时平行于地面的平面, 来产生更大的摩擦力
+        """
         plt.pause(dt)
     plt.show()
 
 
 if __name__ == '__main__':
     job_print_robot_walk()
+    "叠词词, 恶心心"
