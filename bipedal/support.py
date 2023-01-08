@@ -49,6 +49,9 @@ class State:
         self.leg13_front_xy = np.array([0, 0])
         self.leg13_back_xy = np.array([0, 0])
 
+        self.vh = 0
+        self.a_mass = 0
+
 
 class Control:
     def __init__(self):
@@ -247,7 +250,9 @@ def job_print_robot_support():
         h_next = np.sqrt((state.leg1_length + state.leg2_length) ** 2 - ctl.foot_xy[0] ** 2)
         dh = h_next - state.leg_base_xy[1]
         vh = dh / ctl.dt
-        print(f"重心高度 {h_next} 重心速度 {vh}")
+        state.a_mass = (vh - state.vh) / ctl.dt
+        state.vh = dh / ctl.dt
+        print(f"重心高度 {h_next} 重心速度 {vh} 重心加速度 {state.a_mass}")
         state.leg_base_xy = state.leg_base_xy + [0, vh * ctl.dt]
 
         plot_knee()
