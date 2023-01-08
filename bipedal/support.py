@@ -1,11 +1,14 @@
 # 通过展示单腿的支撑态, 来确定重心的移动过程
 import math
+import time
 
 import matplotlib.pyplot as plt
 from matplotlib import collections
 
 import numpy as np
 from numpy import pi, sin, cos, fmod
+
+_dt = 0.05
 
 
 class State:
@@ -16,6 +19,8 @@ class State:
         self.x_p_step = self.velocity * self.single_step_time
         print("单步持续时间", self.single_step_time)
         print("单步运动距离", self.x_p_step)
+        self.x_p_dt = self.x_p_step / self.single_step_time * _dt
+        print("足部需要运动过的距离/每个dt", self.x_p_dt)
 
         self.head_r = 0.261 / 2
         self.head_x = 0.500
@@ -56,7 +61,7 @@ class State:
 class Control:
     def __init__(self):
         self.now = 0.0
-        self.dt = 0.05
+        self.dt = _dt
         self.cnt = 0
         self.control_loop_total = 20
         self.ctl_index = self.cnt % self.control_loop_total
@@ -73,8 +78,9 @@ class Control:
         self.theta_leg23 = 0
         # 质心z轴位置
         self.z_pos = 0.0
-        # 初始脚位置
-        self.foot_xy = np.array([state.x_p_step / 2, 0])
+        # 初始脚位置 相对于center线的ankle点
+        self.foot1_xy = np.array([state.x_p_step / 2, 0])
+        self.foot2_xy = np.array([0, 0])
 
     def add_control_index(self):
         self.cnt = self.cnt + 1
@@ -174,7 +180,7 @@ def plot_leg12(dtheta):
 
 def plot_leg22(dtheta):
     state.leg22_theta = state.leg21_theta + dtheta
-    leg_xy_00 = np.array([sin(state.leg21_theta) * state.leg2_length, cos(state.leg21_theta) * state.leg2_length])
+    leg_xy_00 = np.array([sin(state.leg22_theta) * state.leg2_length, cos(state.leg22_theta) * state.leg2_length])
     state.leg2_ankle_xy = leg_xy_00 + state.leg2_knee_xy
     plot_line([state.leg2_knee_xy, state.leg2_ankle_xy], 'cyan')
 
@@ -221,6 +227,14 @@ def plot_leg23(dtheta):
     state.leg23_theta = theta + pi
 
 
+def plot_point(xy):
+    plt.gcf().gca().add_patch(plt.Circle(xy, 0.010, linestyle='-', fill=False, color='black'))
+
+
+def tri_lll(a, b, c):
+    return np.arccos((b * b + c * c - a * a) / (2 * b * c))
+
+
 def job_print_robot_support():
     plt.figure(figsize=(7, 6), )
     plt.axes([0.12, 0.11, 0.90 / 2, 0.80])
@@ -229,7 +243,10 @@ def job_print_robot_support():
     print("\n开始脚脚运动模拟")
     print("大腿角速度rad/s", ctl.w_leg1)
     info_xy = [0.8, 1.6]
+    st = time.time()
+    last = time.time()
     for t in np.arange(0, perid, ctl.dt):
+        st = time.time()
         plt.cla()
         plot_ref_line()
         plt.text(-0.05, 1.900, f'当前={t: 2.1f}秒')
@@ -237,19 +254,9 @@ def job_print_robot_support():
         ################################### 运动开始
         ctl_index = ctl.ctl_index
         plot_body()
-        # 腿的运动轨迹
-        # 足部因为要支持运动, 所以需要在每个dt中端点走过的距离
-        x_p_dt = state.x_p_step / state.single_step_time * ctl.dt
-        # print("足部需要运动过的距离", x_p_dt)
-        # 假设偏离的向前, 向后距离是相等的
-        ctl.theta_leg11 = np.arcsin(ctl.foot_xy[0] / (state.leg1_length + state.leg2_length))
-        # print("初始leg11角度", start_leg11_theta)
+        # 以腿永远伸直来规划运动 得到一个角度
+        ctl.theta_leg11 = np.arcsin(ctl.foot1_xy[0] / (state.leg1_length + state.leg2_length))
         plot_leg11(ctl.theta_leg11)
-        ctl_foot_xy = [
-            [-1] * 10 + [1] * 10,
-            [0] * 20  # todo 抬脚运动
-            # 有反解和路径规划就是方便啊
-        ]
         plot_knee(1)
         plot_leg12(ctl.theta_leg12)
         plot_ankle(1)
@@ -266,19 +273,46 @@ def job_print_robot_support():
         plot_ankle(2)
         plot_leg23(ctl.theta_leg23)
 
-        ######################## 更新下一个时刻的重心和运动位置信息
+        ## 规划第二条腿路径
+        # 1. 判断是否能达到, 不能到就取一个接近的值呀笨蛋
+        # 2. 使用边边边公式给出答案
+        ctl_foot_xy = np.array([  # 我也不知道这个路径选的怎么样, 但是先算吧
+            [1] * 5 + [-1] * 10 + [1] * 5,
+            [0.5] * 10 + [-0.5] * 10
+        ]) * state.x_p_dt
+        ctl.foot2_xy = ctl.foot2_xy + [ctl_foot_xy[0][ctl_index], ctl_foot_xy[1][ctl_index]]
+        target_foot_xy = state.leg_base_xy - [0, state.leg1_length + state.leg2_length] + ctl.foot2_xy
+        plot_point(target_foot_xy)
+        xy_from_base = target_foot_xy - state.leg_base_xy
+        if state.leg1_length + state.leg2_length > np.sqrt(np.sum(xy_from_base * xy_from_base)):
+            # target角 大腿偏target角 小腿偏大腿角
+            theta1 = - np.arctan(xy_from_base[0] / abs(xy_from_base[1]))
+            theta2 = tri_lll(state.leg2_length, state.leg1_length, np.sqrt(np.sum(xy_from_base * xy_from_base)))
+            theta3 = tri_lll(np.sqrt(np.sum(xy_from_base * xy_from_base)), state.leg2_length, state.leg1_length)
+            print('t1', np.rad2deg(theta1))
+            print('t2', np.rad2deg(theta2))
+            print('t3', np.rad2deg(theta3))
+            ctl.theta_leg21 = pi/3
+            ctl.theta_leg22 = pi/2
 
+        ######################## 更新下一个时刻的重心和运动位置信息
+        ctl_foot_xy = [
+            [-1] * 10 + [1] * 10,
+            [0] * 20
+        ]
         # 下一个时刻的足坐标
-        ctl.foot_xy = ctl.foot_xy + [x_p_dt * ctl_foot_xy[0][ctl_index], 0]
+        ctl.foot1_xy = ctl.foot1_xy + [state.x_p_dt * ctl_foot_xy[0][ctl_index], 0]
         # 为了保持脚在一个水平面, 所以把身体向上顶
-        h_next = np.sqrt((state.leg1_length + state.leg2_length) ** 2 - ctl.foot_xy[0] ** 2)
+        h_next = np.sqrt((state.leg1_length + state.leg2_length) ** 2 - ctl.foot1_xy[0] ** 2)
         dh = h_next - state.leg_base_xy[1]
         vh = dh / ctl.dt
         state.a_mass = (vh - state.vh) / ctl.dt
         state.vh = dh / ctl.dt
-        print(f"重心高度 {h_next} 重心速度 {vh} 重心加速度 {state.a_mass}")
+        # print(f"重心高度 {h_next} 重心速度 {vh} 重心加速度 {state.a_mass}")
         state.leg_base_xy = state.leg_base_xy + [0, vh * ctl.dt]
 
+        last = time.time() - st
+        print("不包含暂停的所有操作计算时间为(秒)", last)  # 31ms
         plt.pause(ctl.dt)
         ctl.add_control_index()
     plt.show()
