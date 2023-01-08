@@ -1,4 +1,4 @@
-# 通过打印两个圆, 来展示步态
+# 通过打印两个圆, 和一个脚底板, 来展示摩擦运动
 import math
 
 import matplotlib.pyplot as plt
@@ -199,6 +199,7 @@ def plot_leg13(dtheta):
     leg_xy_back = np.array([sin(theta) * (leg3_back_length), cos(theta) * (leg3_back_length)])
     plot_line([leg_xy_front + leg_xy_o, leg_xy_back + leg_xy_o], 'orange')  # 咦, 我只需要关心某些点就行了
     state.leg23_theta = theta + pi
+    print("指尖距地面高度",(leg_xy_front + leg_xy_o)[1] )
 
 
 def job_print_robot_walk():
