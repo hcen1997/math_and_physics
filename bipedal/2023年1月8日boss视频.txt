@@ -1,0 +1,54 @@
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=Pxq53vi7880
+Learning Agile Skills via Adversarial Imitation of Rough Partial Demonstrations
+开源4足狗强化学习后空翻和其他技能
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=3Q7gpUhnmUU&t=8s
+CASSI - Cooperative Adversarial Self-supervised Skill Imitation
+开源4足狗强化学习技能后的展示
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=KQhlZa42fe4&list=PLqGfMyf0_U40LwI_X7Z4ot7WoMNYsRy68&index=10
+Cat-like Jumping and Landing of Legged Robots in Low-gravity
+低重力下4足猫式运动
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=IVOToyz98QI&list=PLqGfMyf0_U40LwI_X7Z4ot7WoMNYsRy68&index=4&t=61s
+The dynamic effect of mechanical losses of transmissions on the equation of motion of legged robots
+传动机械损失对腿式机器人运动方程的动态影响 (不是很重要,不要看)
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=VRNqz1w-87o&list=PLqGfMyf0_U43CfYdjxKFrrFQH44MP5mhf&index=1
+Gerardo Bledt (MIT): Generalizing and improving regularized predictive control for legged robots
+rpc for legged robot  (mit4足, 很重要)
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=4Qg5I5vhX7Q&list=PLqGfMyf0_U416HaEa9zDcDTgj5IWdSj8o&index=9&t=34s
+SIGGRAPH Asia 2018: Skills from Videos paper (main video)
+从图像中学习后空翻, 并用于不平地面(两足平板脚)
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=wySUxZN_KbM&t=553s
+SIGGRAPH 2021: Adversarial Motion Priors (main video)
+(两足平板脚)
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=XI00wa4TGHY
+CDC 2021 Presentation - Force-and-moment-based MPC for Highly Dynamic Bipedal Robots
+两足mpc
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=zi-zW1n-aT0
+CDC 2022: Distributed Quadratic Programming-Based Nonlinear Controllers for Legged Locomotion
+四足 不知道啥控制方式, 看起来还行
+
+David 张小白 舜飞ceo:
+https://www.youtube.com/watch?v=Jp0D8_AKiIY
+25hzmpc 四足
+
+
+### 重要
+Flexible Muscle-Based Locomotion for Bipedal Creatures
+https://www.youtube.com/watch?v=pgaEE27nsQw
+两足肌肉控制
