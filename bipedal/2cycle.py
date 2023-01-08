@@ -27,18 +27,21 @@ class State:  # python: class 是个框, 啥都往里装 就是
         self.leg_front_limit = pi / 6
         self.leg_back_limit = -pi / 12
         # 大腿长
-        self.leg1_length = 600
+        self.leg1_length = 384
         self.leg1_knee_xy = None
         self.leg11_theta = None
         self.leg2_knee_xy = None
         self.leg21_theta = None
 
+        # 脚踝
+        self.leg_ankle_R = 48
         # 小腿长
-        self.leg2_length = 500
+        self.leg2_length = 428
         self.leg1_ankle_xy = None
         self.leg12_theta = None
         self.leg2_ankle_xy = None
         self.leg22_theta = None
+
 
 
 state = State()
@@ -60,16 +63,16 @@ def plot_ref_line():
 
 def plot_body():
     # 在0.5,1.75处画一个头 半径为0.12
-    head_r = 120
+    head_r = 261/2
     head_x = 500
-    head = plt.Circle((0.5 * 1000, 1.75 * 1000 - head_r), head_r, linestyle='-', fill=False)
+    head = plt.Circle((head_x, state.height- head_r), head_r, linestyle='-', fill=False)
     plt.gcf().gca().add_patch(head)
-    body_h = 700
-    body_w = 200
-    body = plt.Rectangle((head_x - body_w / 2, 1750 - 2 * head_r - body_h), body_w, body_h, linestyle='-', fill=False)
+    body_h = 556
+    body_w = 237
+    body = plt.Rectangle((head_x - body_w / 2, state.height - 2 * head_r - body_h), body_w, body_h, linestyle='-', fill=False)
     plt.gcf().gca().add_patch(body)
     # 画出腿部基点圆
-    state.leg_base_xy = [head_x, 1750 - 2 * head_r - body_h]
+    state.leg_base_xy = [head_x, state.height - 2 * head_r - body_h]
     leg_base = plt.Circle(state.leg_base_xy, 30, linestyle='-', fill=True, color='red')
     plt.gcf().gca().add_patch(leg_base)
 
