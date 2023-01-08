@@ -26,7 +26,7 @@ class State:
         self.leg_front_limit = pi / 6
         self.leg_back_limit = -pi / 12
         # 大腿长
-        self.leg1_length = 384
+        self.leg1_length = 0.384
         self.leg1_knee_xy = np.array([0, 0])
         self.leg11_theta = 0
         self.leg2_knee_xy = np.array([0, 0])
@@ -59,10 +59,16 @@ class Control:
         self.ctl_index = self.cnt % self.control_loop_total
 
         self.w_leg1 = (state.leg_front_limit - state.leg_back_limit) / state.single_step_time
+        # 大腿偏离y轴负半轴的角度, 向左为正
         self.theta_leg11 = 0
+        # 小腿偏离大腿向小腿延长线的角度, 向左为正(都是负的)
         self.theta_leg12 = 0
+        # 脚偏离小腿左向垂线的角度向上为正
+        self.theta_leg13 = 0
         # 质心z轴位置
         self.z_pos = 0.0
+        # 初始脚位置
+        self.foot_xy = np.array([state.x_p_step / 2, 0])
 
     def add_control_index(self):
         self.cnt = self.cnt + 1
@@ -108,13 +114,10 @@ def plot_body():
 
 def plot_leg11(dtheta=0):
     # 向上为正
-    theta = state.leg_center_angle + state.leg_front_limit + dtheta
-    leg_xy_00 = [sin(theta) * state.leg1_length, cos(theta) * state.leg1_length]
-    leg_xy_00 = np.array(leg_xy_00)
-    lb = np.array(state.leg_base_xy)
-    plot_line([state.leg_base_xy, leg_xy_00 + lb], 'orange')
-    state.leg1_knee_xy = leg_xy_00 + lb
-    state.leg11_theta = theta
+    state.leg11_theta = state.leg_center_angle + dtheta
+    leg_xy_00 = np.array([sin(state.leg11_theta) * state.leg1_length, cos(state.leg11_theta) * state.leg1_length])
+    plot_line([state.leg_base_xy, leg_xy_00 + state.leg_base_xy], 'orange')
+    state.leg1_knee_xy = leg_xy_00 + state.leg_base_xy
 
 
 def plot_line(line, color):
@@ -157,25 +160,13 @@ def gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt, ctl_dtheta_sig,
 
 
 def plot_leg12(dtheta):
-    # plot_line([state.leg1_knee_xy, (200, 200)], 'orange')
-
-    theta = state.leg11_theta + dtheta
+    state.leg12_theta = state.leg11_theta + dtheta
     color = 'orange'
-    # 大腿处于+-15度边界的时候, 腿平行, 其他时刻腿垂直
-    if abs(state.leg11_theta - state.leg_center_angle) < pi / 12 and state.index_in_loop < 10:
-        color = 'red'
-        # print(state.index_in_loop)
-    else:
-        # theta = state.leg_center_angle + dtheta
-        color = 'orange'
-
-    leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
-
-    state.leg1_ankle_xy = leg_xy_00 + np.array(state.leg1_knee_xy)
-    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], color)  # 咦, 我只需要关心某些点就行了
+    leg_xy_00 = np.array([sin(state.leg12_theta) * state.leg2_length, cos(state.leg12_theta) * state.leg2_length])
+    state.leg1_ankle_xy = leg_xy_00 + state.leg1_knee_xy
+    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], color)
     t = (state.leg1_ankle_xy - state.leg1_knee_xy) ** 2
     # print("leg2长度", math.sqrt(t[0] + t[1])) # leg2 长度没问题, 只是看起来有变化
-    state.leg12_theta = theta
 
 
 def plot_leg22(dtheta):
@@ -188,31 +179,27 @@ def plot_leg22(dtheta):
 
 # log_
 def plot_knee():
-    knee1 = plt.Circle(state.leg1_knee_xy, 40, linestyle='-', fill=False, color='green')
+    knee1 = plt.Circle(state.leg1_knee_xy, 0.040, linestyle='-', fill=False, color='green')
     plt.gcf().gca().add_patch(knee1)
     # knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False, color='green')
     # plt.gcf().gca().add_patch(knee2)
 
 
 def plot_leg13(dtheta):
-    leg3_back_length = 41
-    print('脚踝距地面距离', state.leg1_ankle_xy[1])
-    # 脚掌2百3 最大距离240
-    # 这里简单写个离地面 20 高的运动情况
-    foot_from_ground = state.leg1_ankle_xy[1]
-    target_h = foot_from_ground - 80
-    target_dtheta = np.arccos(target_h / (state.leg3_length - leg3_back_length))
-
-    theta = state.leg_center_angle + target_dtheta  # + state.leg_back_limit + dtheta
-    leg_xy_o = np.array(state.leg1_ankle_xy)
+    theta = state.leg12_theta + pi / 2 + dtheta  # + state.leg_back_limit + dtheta
     leg_xy_front = np.array(
-        [sin(theta) * (state.leg3_length - leg3_back_length), cos(theta) * (state.leg3_length - leg3_back_length)])
-    # state.leg2_ankle_xy = leg_xy_00 + np.array(state.leg2_knee_xy)
+        [sin(theta) * (state.leg3_length - state.leg3_back_length),
+         cos(theta) * (state.leg3_length - state.leg3_back_length)])
     theta = theta - pi
-    leg_xy_back = np.array([sin(theta) * (leg3_back_length), cos(theta) * (leg3_back_length)])
-    plot_line([leg_xy_front + leg_xy_o, leg_xy_back + leg_xy_o], 'orange')  # 咦, 我只需要关心某些点就行了
+    leg_xy_back = np.array([sin(theta) * (state.leg3_back_length), cos(theta) * (state.leg3_back_length)])
+    plot_line([leg_xy_front + state.leg1_ankle_xy, leg_xy_back + state.leg1_ankle_xy], 'orange')  # 咦, 我只需要关心某些点就行了
     state.leg23_theta = theta + pi
-    print("指尖距地面高度", (leg_xy_front + leg_xy_o)[1])
+    # print("指尖距地面高度", (leg_xy_front + leg_xy_o)[1])
+
+
+def plot_ankle():
+    ankle = plt.Circle(state.leg1_ankle_xy, state.leg_ankle_R / 2, linestyle='-', fill=False, color='green')
+    plt.gcf().gca().add_patch(ankle)
 
 
 def job_print_robot_support():
@@ -226,7 +213,6 @@ def job_print_robot_support():
     for t in np.arange(0, perid, ctl.dt):
         plt.cla()
         plot_ref_line()
-        plot_body()
         plt.text(-0.05, 1.900, f'当前={t: 2.1f}秒')
 
         ############################# controller start ###########
@@ -240,23 +226,37 @@ def job_print_robot_support():
         ]
         ######################### controller stop #############
         ctl_index = ctl.ctl_index
-        v = 0.01 if ctl_index < 10 else -0.01  # m/s
-        state.leg_base_xy = state.leg_base_xy + [0, v * ctl.dt]
+        plot_body()
+        # 腿的运动轨迹
+        # 足部因为要支持运动, 所以需要在每个dt中端点走过的距离
+        x_p_dt = state.x_p_step / state.single_step_time * ctl.dt
+        # print("足部需要运动过的距离", x_p_dt)
+        # 假设偏离的向前, 向后距离是相等的
+        ctl.theta_leg11 = np.arcsin(ctl.foot_xy[0] / (state.leg1_length + state.leg2_length))
+        # print("初始leg11角度", start_leg11_theta)
+        plot_leg11(ctl.theta_leg11)
+        ctl_foot_xy = [
+            [-1] * 10 + [1] * 10,
+            [0] * 20  # todo 抬脚运动
+            # 有反解和路径规划就是方便啊
+        ]
 
-        # dtheta_leg11 = dtheta_leg11 + w * dt * ctl_leg1_sig[0][current_index_in_control_arr]
-        # plot_leg11(dtheta_leg11)
-        # dtheta_leg12 = dtheta_leg12 + w * dt * ctl_leg1_sig[1][current_index_in_control_arr]
-        # plot_leg21(dtheta_leg12)
+        # 下一个时刻的足坐标
+        ctl.foot_xy = ctl.foot_xy + [x_p_dt * ctl_foot_xy[0][ctl_index], 0]
+        # 为了保持脚在一个水平面, 所以把身体向上顶
+        h_next = np.sqrt((state.leg1_length + state.leg2_length) ** 2 - ctl.foot_xy[0] ** 2)
+        dh = h_next - state.leg_base_xy[1]
+        vh = dh / ctl.dt
+        print(f"重心高度 {h_next} 重心速度 {vh}")
+        state.leg_base_xy = state.leg_base_xy + [0, vh * ctl.dt]
 
-        # 画出膝盖和小腿
-        # plot_knee()
-        # dtheta_leg21 = ctl_leg2_sig[0][current_index_in_control_arr]
-        # plot_leg12(dtheta_leg21)
-        # dtheta_leg22 = ctl_leg2_sig[1][current_index_in_control_arr]
-        # plot_leg22(dtheta_leg22)
+        plot_knee()
+        plot_leg12(ctl.theta_leg12)
+        plot_ankle()
+        plot_leg13(ctl.theta_leg13)
 
         plt.text(info_xy[0], info_xy[1], f'重心高度 {state.leg_base_xy[1]:.3f}')
-        # plt.text(info_xy[0], info_xy[1]-0.08, f'脚离地面高度 {state.leg_base_xy[1]:.3f}')
+        plt.text(info_xy[0], info_xy[1] - 0.08, f'踝关节离地距离 {state.leg1_ankle_xy[1]:.3f}')
         plt.pause(ctl.dt)
         ctl.add_control_index()
     plt.show()
