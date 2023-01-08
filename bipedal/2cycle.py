@@ -43,7 +43,6 @@ class State:  # python: class 是个框, 啥都往里装 就是
         self.leg22_theta = None
 
 
-
 state = State()
 
 # 基础坐标轴  高为2米的线 (2000)
@@ -63,13 +62,14 @@ def plot_ref_line():
 
 def plot_body():
     # 在0.5,1.75处画一个头 半径为0.12
-    head_r = 261/2
+    head_r = 261 / 2
     head_x = 500
-    head = plt.Circle((head_x, state.height- head_r), head_r, linestyle='-', fill=False)
+    head = plt.Circle((head_x, state.height - head_r), head_r, linestyle='-', fill=False)
     plt.gcf().gca().add_patch(head)
     body_h = 556
     body_w = 237
-    body = plt.Rectangle((head_x - body_w / 2, state.height - 2 * head_r - body_h), body_w, body_h, linestyle='-', fill=False)
+    body = plt.Rectangle((head_x - body_w / 2, state.height - 2 * head_r - body_h), body_w, body_h, linestyle='-',
+                         fill=False)
     plt.gcf().gca().add_patch(body)
     # 画出腿部基点圆
     state.leg_base_xy = [head_x, state.height - 2 * head_r - body_h]
@@ -133,9 +133,17 @@ def plot_leg12(dtheta):
     # plot_line([state.leg1_knee_xy, (200, 200)], 'orange')
 
     theta = state.leg11_theta + dtheta
+    color = 'orange'
+    # 大腿处于+-15度边界的时候, 腿平行, 其他时刻腿垂直
+    if abs(state.leg11_theta - state.leg_center_angle) < pi / 12:
+        color = 'red'
+    else:
+        theta = state.leg_center_angle
+        color = 'orange'
+
     leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
     state.leg1_ankle_xy = leg_xy_00 + np.array(state.leg1_knee_xy)
-    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], 'orange')  # 咦, 我只需要关心某些点就行了
+    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], color)  # 咦, 我只需要关心某些点就行了
     state.leg12_theta = theta
 
 
@@ -146,12 +154,14 @@ def plot_leg22(dtheta):
     plot_line([state.leg2_knee_xy, state.leg2_ankle_xy], 'cyan')  # 咦, 我只需要关心某些点就行了
     state.leg22_theta = theta
 
+
 # log_
 def plot_knee():
-    knee1 = plt.Circle(state.leg1_knee_xy, 40, linestyle='-', fill=False,color='green')
+    knee1 = plt.Circle(state.leg1_knee_xy, 40, linestyle='-', fill=False, color='green')
     plt.gcf().gca().add_patch(knee1)
-    knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False,color='green')
+    knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False, color='green')
     plt.gcf().gca().add_patch(knee2)
+
 
 def job_print_robot_walk():
     plt.figure(figsize=(7, 6), )
@@ -189,7 +199,7 @@ def job_print_robot_walk():
         ######################### controller stop #############
         # 在一个单步周期内, 走过整个区间的速度
         w = (state.leg_front_limit - state.leg_back_limit) / state.single_step_time
-        print("大腿角速度rad/s",w)
+        print("大腿角速度rad/s", w)
         # 根据当前时间, 计算dtheta
         current_index_in_control_arr = int(fmod(t, ctl_step_duration) / dt)
 
@@ -205,8 +215,8 @@ def job_print_robot_walk():
         plot_knee()
         plot_leg12(0)
         plot_leg22(0)
-        print(f'当前时间 {t:.1f} 左脚踝 {state.leg2_ankle_xy} 右脚踝 {state.leg1_ankle_xy}' )
-              # f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
+        print(f'当前时间 {t:.1f} 左脚踝 {state.leg2_ankle_xy} 右脚踝 {state.leg1_ankle_xy}')
+        # f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
         """
         从模拟中可以看出, 只有2连杆的情况下, 足端到地面有一个 delta_height 
         那么脚面的功能就的出来了, 补足这个 delta_height
