@@ -282,18 +282,18 @@ def job_print_robot_support():
         ]) * state.x_p_dt
         ctl.foot2_xy = ctl.foot2_xy + [ctl_foot_xy[0][ctl_index], ctl_foot_xy[1][ctl_index]]
         target_foot_xy = state.leg_base_xy - [0, state.leg1_length + state.leg2_length] + ctl.foot2_xy
-        plot_point(target_foot_xy)
+        # plot_point(target_foot_xy)
         xy_from_base = target_foot_xy - state.leg_base_xy
         if state.leg1_length + state.leg2_length > np.sqrt(np.sum(xy_from_base * xy_from_base)):
             # target角 大腿偏target角 小腿偏大腿角
             theta1 = - np.arctan(xy_from_base[0] / abs(xy_from_base[1]))
             theta2 = tri_lll(state.leg2_length, state.leg1_length, np.sqrt(np.sum(xy_from_base * xy_from_base)))
             theta3 = tri_lll(np.sqrt(np.sum(xy_from_base * xy_from_base)), state.leg2_length, state.leg1_length)
-            print('t1', np.rad2deg(theta1))
-            print('t2', np.rad2deg(theta2))
-            print('t3', np.rad2deg(theta3))
-            ctl.theta_leg21 = pi/3
-            ctl.theta_leg22 = pi/2
+            # print('t1', np.rad2deg(theta1))
+            # print('t2', np.rad2deg(theta2))
+            # print('t3', np.rad2deg(theta3))
+            ctl.theta_leg21 = theta1+theta2
+            ctl.theta_leg22 = theta3-pi
 
         ######################## 更新下一个时刻的重心和运动位置信息
         ctl_foot_xy = [
