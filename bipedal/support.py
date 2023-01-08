@@ -258,6 +258,7 @@ def job_print_robot_support():
         plot_knee()
         plot_leg12(ctl.theta_leg12)
         plot_ankle()
+        ctl.theta_leg13 = -ctl.theta_leg11
         plot_leg13(ctl.theta_leg13)
 
         plt.text(info_xy[0], info_xy[1], f'重心高度 {state.leg_base_xy[1]:.3f}')
