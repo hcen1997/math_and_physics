@@ -17,9 +17,6 @@ class State:
         print("单步持续时间", self.single_step_time)
         print("单步运动距离", self.x_p_step)
 
-        # 周期控制
-        self.index_in_loop = 0
-
         self.head_r = 0.261 / 2
         self.head_x = 0.500
         self.body_h = 0.556
@@ -53,7 +50,27 @@ class State:
         self.leg13_back_xy = np.array([0, 0])
 
 
+class Control:
+    def __init__(self):
+        self.now = 0.0
+        self.dt = 0.05
+        self.cnt = 0
+        self.control_loop_total = 20
+        self.ctl_index = self.cnt % self.control_loop_total
+
+        self.w_leg1 = (state.leg_front_limit - state.leg_back_limit) / state.single_step_time
+        self.theta_leg11 = 0
+        self.theta_leg12 = 0
+        # 质心z轴位置
+        self.z_pos = 0.0
+
+    def add_control_index(self):
+        self.cnt = self.cnt + 1
+        self.ctl_index = self.cnt % self.control_loop_total
+
+
 state = State()
+ctl = Control()
 
 
 def plot_ref_line():
@@ -203,30 +220,17 @@ def job_print_robot_support():
     plt.axes([0.12, 0.11, 0.90 / 2, 0.80])
     plt.ion()
     perid = 50  # 秒
-    dt = 0.05
-    dtheta_leg11, dtheta_leg12 = 0.0, 0.0
-    w = (state.leg_front_limit - state.leg_back_limit) / state.single_step_time
     print("\n开始脚脚运动模拟")
-    print("大腿角速度rad/s", w)
-    for t in np.arange(0, perid, dt):
+    print("大腿角速度rad/s", ctl.w_leg1)
+    info_xy = [0.8, 1.6]
+    for t in np.arange(0, perid, ctl.dt):
         plt.cla()
         plot_ref_line()
         plot_body()
+        plt.text(-0.05, 1.900, f'当前={t: 2.1f}秒')
 
         ############################# controller start ###########
-        ctl_step_duration = 2 * state.single_step_time
-        ctl_step_dt = dt
-        ctl_dtheta_sig = [[-1, 1],
-                          [1, -1]]
-        ctl_step_period = [state.single_step_time, state.single_step_time]
-        # 这里直接使用指定结果
-        # ctl_dtheta_sig_in_period = gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt,
-        #                                                         ctl_dtheta_sig, ctl_step_period)
-        # print(ctl_dtheta_sig_in_period)
-        ctl_leg1_sig = [
-            [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, ]]
-        # 着地序列 3,4,5,6,7,8  前摆序列 10 11 12 13 14 15
+        touch_down = [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
         da = -pi / 24
         ctl_leg2_sig = [
             [da * 3, da * 2, da * 0.5, 0, 0, 0, 0, 0, 0, da * 1,
@@ -235,36 +239,26 @@ def job_print_robot_support():
              -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, ]
         ]
         ######################### controller stop #############
-        # 在一个单步周期内, 走过整个区间的速度
-        # 根据当前时间, 计算dtheta
-        current_index_in_control_arr = int(fmod(t, ctl_step_duration) / dt)
-        state.index_in_loop = current_index_in_control_arr
-        dtheta_leg11 = dtheta_leg11 + w * dt * ctl_leg1_sig[0][current_index_in_control_arr]
+        ctl_index = ctl.ctl_index
+        v = 0.01 if ctl_index < 10 else -0.01  # m/s
+        state.leg_base_xy = state.leg_base_xy + [0, v * ctl.dt]
+
+        # dtheta_leg11 = dtheta_leg11 + w * dt * ctl_leg1_sig[0][current_index_in_control_arr]
         # plot_leg11(dtheta_leg11)
-        dtheta_leg12 = dtheta_leg12 + w * dt * ctl_leg1_sig[1][current_index_in_control_arr]
+        # dtheta_leg12 = dtheta_leg12 + w * dt * ctl_leg1_sig[1][current_index_in_control_arr]
         # plot_leg21(dtheta_leg12)
-        plt.text(-240, 1900, f'当前时间={t: 2.1f}秒')
-        # print(f'当前时间 {t:.1f} 左膝盖xy {state.leg2_knee_xy} '
-        #       f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
 
         # 画出膝盖和小腿
         # plot_knee()
-        dtheta_leg21 = ctl_leg2_sig[0][current_index_in_control_arr]
+        # dtheta_leg21 = ctl_leg2_sig[0][current_index_in_control_arr]
         # plot_leg12(dtheta_leg21)
-        dtheta_leg22 = ctl_leg2_sig[1][current_index_in_control_arr]
+        # dtheta_leg22 = ctl_leg2_sig[1][current_index_in_control_arr]
         # plot_leg22(dtheta_leg22)
-        # print(f'当前时间 {t:.1f} 左脚踝 {state.leg2_ankle_xy} 右脚踝 {state.leg1_ankle_xy}')
-        # f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
-        """
-        从模拟中可以看出, 只有2连杆的情况下, 足端到地面有一个 delta_height 
-        那么脚面的功能就的出来了, 补足这个 delta_height
-        同时因为 脚面的补足对于地面只是一个点/球
-        所以需要大拇指来产生一个随时平行于地面的平面, 来产生更大的摩擦力
-        """
 
-        # plot_leg13(0)
-        plt.pause(dt)
-        # plt.pause(dt /dt)
+        plt.text(info_xy[0], info_xy[1], f'重心高度 {state.leg_base_xy[1]:.3f}')
+        # plt.text(info_xy[0], info_xy[1]-0.08, f'脚离地面高度 {state.leg_base_xy[1]:.3f}')
+        plt.pause(ctl.dt)
+        ctl.add_control_index()
     plt.show()
 
 
