@@ -17,6 +17,7 @@ class State:  # python: class 是个框, 啥都往里装 就是
         sample1_time = 52
         self.velocity = 1.2
         self.single_step_time = sample1_time / sample1_step
+        self.single_step_time = 0.5
         self.x_p_step = self.velocity * self.single_step_time
         print("单步持续时间", self.single_step_time)
         print("单步运动距离", self.x_p_step)
@@ -148,7 +149,7 @@ def job_print_robot_walk():
     plt.axes([0.12, 0.11, 0.90 / 2, 0.88])
     plt.ion()
     perid = 10  # 秒
-    dt = 0.02
+    dt = 0.05
     dtheta_leg11, dtheta_leg12 = 0.0, 0.0
     print("\n开始脚脚运动模拟")
     for t in np.arange(0, perid, dt):
@@ -169,13 +170,17 @@ def job_print_robot_walk():
         ctl_dtheta_sig = [[-1, 1],
                           [1, -1]]
         ctl_step_period = [state.single_step_time, state.single_step_time]
-        # todo codelyze ctl_
-        ctl_dtheta_sig_in_period = gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt,
-                                                                ctl_dtheta_sig, ctl_step_period)
+        # 这里直接使用指定结果
+        # ctl_dtheta_sig_in_period = gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt,
+        #                                                         ctl_dtheta_sig, ctl_step_period)
         # print(ctl_dtheta_sig_in_period)
+        ctl_dtheta_sig_in_period = [
+            [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, ]]
         ######################### controller stop #############
         # 在一个单步周期内, 走过整个区间的速度
         w = (state.leg_front_limit - state.leg_back_limit) / state.single_step_time
+        print("大腿角速度rad/s",w)
         # 根据当前时间, 计算dtheta
         current_index_in_control_arr = int(fmod(t, ctl_step_duration) / dt)
 
