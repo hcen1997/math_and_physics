@@ -22,6 +22,9 @@ class State:  # python: class 是个框, 啥都往里装 就是
         print("单步持续时间", self.single_step_time)
         print("单步运动距离", self.x_p_step)
 
+        # 周期控制
+        self.index_in_loop = 0
+
         self.leg_base_xy = None
         self.leg_center_angle = pi
         self.leg_front_limit = pi / 6
@@ -135,10 +138,11 @@ def plot_leg12(dtheta):
     theta = state.leg11_theta + dtheta
     color = 'orange'
     # 大腿处于+-15度边界的时候, 腿平行, 其他时刻腿垂直
-    if abs(state.leg11_theta - state.leg_center_angle) < pi / 12:
+    if abs(state.leg11_theta - state.leg_center_angle) < pi / 12 and state.index_in_loop<10:
         color = 'red'
+        print(state.index_in_loop)
     else:
-        theta = state.leg_center_angle
+        # theta = state.leg_center_angle + dtheta
         color = 'orange'
 
     leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
@@ -159,15 +163,15 @@ def plot_leg22(dtheta):
 def plot_knee():
     knee1 = plt.Circle(state.leg1_knee_xy, 40, linestyle='-', fill=False, color='green')
     plt.gcf().gca().add_patch(knee1)
-    knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False, color='green')
-    plt.gcf().gca().add_patch(knee2)
+    # knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False, color='green')
+    # plt.gcf().gca().add_patch(knee2)
 
 
 def job_print_robot_walk():
     plt.figure(figsize=(7, 6), )
     plt.axes([0.12, 0.11, 0.90 / 2, 0.88])
     plt.ion()
-    perid = 5  # 秒
+    perid = 50  # 秒
     dt = 0.05
     dtheta_leg11, dtheta_leg12 = 0.0, 0.0
     print("\n开始脚脚运动模拟")
@@ -193,28 +197,38 @@ def job_print_robot_walk():
         # ctl_dtheta_sig_in_period = gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt,
         #                                                         ctl_dtheta_sig, ctl_step_period)
         # print(ctl_dtheta_sig_in_period)
-        ctl_dtheta_sig_in_period = [
+        ctl_leg1_sig = [
             [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, ]]
+        # 3,4,5,6,7,8  10 11 12 13 14 15
+        da = -pi/24
+        ctl_leg2_sig = [
+            [da*3, da*2, da*0.5, 0, 0, 0, 0, 0, 0, da*1,
+             da*2, da*3, da*4, da*5, da*6, da*7, da*8, da*7, da*6, da*4.5, ],
+            [-pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2,
+             -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, ]
+        ]
         ######################### controller stop #############
         # 在一个单步周期内, 走过整个区间的速度
         w = (state.leg_front_limit - state.leg_back_limit) / state.single_step_time
         print("大腿角速度rad/s", w)
         # 根据当前时间, 计算dtheta
         current_index_in_control_arr = int(fmod(t, ctl_step_duration) / dt)
-
-        dtheta_leg11 = dtheta_leg11 + w * dt * ctl_dtheta_sig_in_period[0][current_index_in_control_arr]
+        state.index_in_loop = current_index_in_control_arr
+        dtheta_leg11 = dtheta_leg11 + w * dt * ctl_leg1_sig[0][current_index_in_control_arr]
         plot_leg11(dtheta_leg11)
-        dtheta_leg12 = dtheta_leg12 + w * dt * ctl_dtheta_sig_in_period[1][current_index_in_control_arr]
-        plot_leg21(dtheta_leg12)
+        dtheta_leg12 = dtheta_leg12 + w * dt * ctl_leg1_sig[1][current_index_in_control_arr]
+        # plot_leg21(dtheta_leg12)
         plt.text(-240, 1900, f'当前时间={t: 2.1f}秒')
         print(f'当前时间 {t:.1f} 左膝盖xy {state.leg2_knee_xy} '
               f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
 
         # 画出膝盖和小腿
         plot_knee()
-        plot_leg12(0)
-        plot_leg22(0)
+        dtheta_leg21 = ctl_leg2_sig[0][current_index_in_control_arr]
+        plot_leg12(dtheta_leg21)
+        dtheta_leg22 = ctl_leg2_sig[1][current_index_in_control_arr]
+        # plot_leg22(dtheta_leg22)
         print(f'当前时间 {t:.1f} 左脚踝 {state.leg2_ankle_xy} 右脚踝 {state.leg1_ankle_xy}')
         # f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
         """
@@ -223,7 +237,8 @@ def job_print_robot_walk():
         同时因为 脚面的补足对于地面只是一个点/球
         所以需要大拇指来产生一个随时平行于地面的平面, 来产生更大的摩擦力
         """
-        plt.pause(dt)
+        plt.pause(dt )
+        # plt.pause(dt /dt)
     plt.show()
 
 
