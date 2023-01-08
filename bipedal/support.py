@@ -68,6 +68,9 @@ class Control:
         self.theta_leg12 = 0
         # 脚偏离小腿左向垂线的角度向上为正
         self.theta_leg13 = 0
+        self.theta_leg21 = 0
+        self.theta_leg22 = 0
+        self.theta_leg23 = 0
         # 质心z轴位置
         self.z_pos = 0.0
         # 初始脚位置
@@ -128,14 +131,11 @@ def plot_line(line, color):
     plt.gcf().gca().add_collection(leg11)
 
 
-def plot_leg21(dtheta=0):
-    theta = state.leg_center_angle + state.leg_back_limit + dtheta
-    leg_xy_00 = [sin(theta) * state.leg1_length, cos(theta) * state.leg1_length]
-    leg_xy_00 = np.array(leg_xy_00)
-    lb = np.array(state.leg_base_xy)
-    plot_line([state.leg_base_xy, leg_xy_00 + lb], 'cyan')
-    state.leg2_knee_xy = leg_xy_00 + lb
-    state.leg21_theta = theta
+def plot_leg21(dtheta):
+    state.leg21_theta = state.leg_center_angle + dtheta
+    leg_xy_00 = np.array([sin(state.leg21_theta) * state.leg1_length, cos(state.leg21_theta) * state.leg1_length])
+    plot_line([state.leg_base_xy, leg_xy_00 + state.leg_base_xy], 'cyan')
+    state.leg2_knee_xy = leg_xy_00 + state.leg_base_xy
 
 
 def gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt, ctl_dtheta_sig, ctl_step_period):
@@ -164,28 +164,29 @@ def gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt, ctl_dtheta_sig,
 
 def plot_leg12(dtheta):
     state.leg12_theta = state.leg11_theta + dtheta
-    color = 'orange'
     leg_xy_00 = np.array([sin(state.leg12_theta) * state.leg2_length, cos(state.leg12_theta) * state.leg2_length])
     state.leg1_ankle_xy = leg_xy_00 + state.leg1_knee_xy
-    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], color)
+    plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], 'orange')
+
     t = (state.leg1_ankle_xy - state.leg1_knee_xy) ** 2
     # print("leg2长度", math.sqrt(t[0] + t[1])) # leg2 长度没问题, 只是看起来有变化
 
 
 def plot_leg22(dtheta):
-    theta = state.leg_center_angle  # + state.leg_back_limit + dtheta
-    leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
-    state.leg2_ankle_xy = leg_xy_00 + np.array(state.leg2_knee_xy)
-    plot_line([state.leg2_knee_xy, state.leg2_ankle_xy], 'cyan')  # 咦, 我只需要关心某些点就行了
-    state.leg22_theta = theta
+    state.leg22_theta = state.leg21_theta + dtheta
+    leg_xy_00 = np.array([sin(state.leg21_theta) * state.leg2_length, cos(state.leg21_theta) * state.leg2_length])
+    state.leg2_ankle_xy = leg_xy_00 + state.leg2_knee_xy
+    plot_line([state.leg2_knee_xy, state.leg2_ankle_xy], 'cyan')
 
 
 # log_
-def plot_knee():
-    knee1 = plt.Circle(state.leg1_knee_xy, 0.040, linestyle='-', fill=False, color='green')
-    plt.gcf().gca().add_patch(knee1)
-    # knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False, color='green')
-    # plt.gcf().gca().add_patch(knee2)
+def plot_knee(n):
+    if n == 1:
+        knee1 = plt.Circle(state.leg1_knee_xy, 0.040, linestyle='-', fill=False, color='green')
+        plt.gcf().gca().add_patch(knee1)
+    elif n == 2:
+        knee2 = plt.Circle(state.leg2_knee_xy, 0.040, linestyle='-', fill=False, color='green')
+        plt.gcf().gca().add_patch(knee2)
 
 
 def plot_leg13(dtheta):
@@ -196,13 +197,28 @@ def plot_leg13(dtheta):
     theta = theta - pi
     leg_xy_back = np.array([sin(theta) * (state.leg3_back_length), cos(theta) * (state.leg3_back_length)])
     plot_line([leg_xy_front + state.leg1_ankle_xy, leg_xy_back + state.leg1_ankle_xy], 'orange')  # 咦, 我只需要关心某些点就行了
-    state.leg23_theta = theta + pi
+    state.leg13_theta = theta + pi
     # print("指尖距地面高度", (leg_xy_front + leg_xy_o)[1])
 
 
-def plot_ankle():
-    ankle = plt.Circle(state.leg1_ankle_xy, state.leg_ankle_R / 2, linestyle='-', fill=False, color='green')
-    plt.gcf().gca().add_patch(ankle)
+def plot_ankle(n):
+    if n == 1:
+        ankle = plt.Circle(state.leg1_ankle_xy, state.leg_ankle_R / 2, linestyle='-', fill=False, color='green')
+        plt.gcf().gca().add_patch(ankle)
+    elif n == 2:
+        ankle = plt.Circle(state.leg2_ankle_xy, state.leg_ankle_R / 2, linestyle='-', fill=False, color='green')
+        plt.gcf().gca().add_patch(ankle)
+
+
+def plot_leg23(dtheta):
+    theta = state.leg22_theta + pi / 2 + dtheta  # + state.leg_back_limit + dtheta
+    leg_xy_front = np.array(
+        [sin(theta) * (state.leg3_length - state.leg3_back_length),
+         cos(theta) * (state.leg3_length - state.leg3_back_length)])
+    theta = theta - pi
+    leg_xy_back = np.array([sin(theta) * (state.leg3_back_length), cos(theta) * (state.leg3_back_length)])
+    plot_line([leg_xy_front + state.leg2_ankle_xy, leg_xy_back + state.leg2_ankle_xy], 'cyan')  # 咦, 我只需要关心某些点就行了
+    state.leg23_theta = theta + pi
 
 
 def job_print_robot_support():
@@ -218,16 +234,7 @@ def job_print_robot_support():
         plot_ref_line()
         plt.text(-0.05, 1.900, f'当前={t: 2.1f}秒')
 
-        ############################# controller start ###########
-        touch_down = [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
-        da = -pi / 24
-        ctl_leg2_sig = [
-            [da * 3, da * 2, da * 0.5, 0, 0, 0, 0, 0, 0, da * 1,
-             da * 2, da * 3, da * 4, da * 5, da * 6, da * 7, da * 8, da * 7, da * 6, da * 4.5, ],
-            [-pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2,
-             -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, -pi / 2, ]
-        ]
-        ######################### controller stop #############
+        ################################### 运动开始
         ctl_index = ctl.ctl_index
         plot_body()
         # 腿的运动轨迹
@@ -243,6 +250,23 @@ def job_print_robot_support():
             [0] * 20  # todo 抬脚运动
             # 有反解和路径规划就是方便啊
         ]
+        plot_knee(1)
+        plot_leg12(ctl.theta_leg12)
+        plot_ankle(1)
+        ctl.theta_leg13 = -ctl.theta_leg11
+        plot_leg13(ctl.theta_leg13)
+
+        plt.text(info_xy[0], info_xy[1], f'重心高度 {state.leg_base_xy[1]:.3f}')
+        plt.text(info_xy[0], info_xy[1] - 0.08, f'踝关节离地距离 {state.leg1_ankle_xy[1]:.3f}')
+
+        ######################################################### 开始处理第二条腿
+        plot_leg21(ctl.theta_leg21)
+        plot_knee(2)
+        plot_leg22(ctl.theta_leg22)
+        plot_ankle(2)
+        plot_leg23(ctl.theta_leg23)
+
+        ######################## 更新下一个时刻的重心和运动位置信息
 
         # 下一个时刻的足坐标
         ctl.foot_xy = ctl.foot_xy + [x_p_dt * ctl_foot_xy[0][ctl_index], 0]
@@ -255,14 +279,6 @@ def job_print_robot_support():
         print(f"重心高度 {h_next} 重心速度 {vh} 重心加速度 {state.a_mass}")
         state.leg_base_xy = state.leg_base_xy + [0, vh * ctl.dt]
 
-        plot_knee()
-        plot_leg12(ctl.theta_leg12)
-        plot_ankle()
-        ctl.theta_leg13 = -ctl.theta_leg11
-        plot_leg13(ctl.theta_leg13)
-
-        plt.text(info_xy[0], info_xy[1], f'重心高度 {state.leg_base_xy[1]:.3f}')
-        plt.text(info_xy[0], info_xy[1] - 0.08, f'踝关节离地距离 {state.leg1_ankle_xy[1]:.3f}')
         plt.pause(ctl.dt)
         ctl.add_control_index()
     plt.show()
