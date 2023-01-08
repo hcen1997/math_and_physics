@@ -129,7 +129,7 @@ def gen_ctl_dtheta_sig_in_period(ctl_step_duration, ctl_step_dt, ctl_dtheta_sig,
 def plot_leg12(dtheta):
     # plot_line([state.leg1_knee_xy, (200, 200)], 'orange')
 
-    theta = state.leg_center_angle  # + state.leg_back_limit + dtheta
+    theta = state.leg11_theta + dtheta
     leg_xy_00 = np.array([sin(theta) * state.leg2_length, cos(theta) * state.leg2_length])
     state.leg1_ankle_xy = leg_xy_00 + np.array(state.leg1_knee_xy)
     plot_line([state.leg1_knee_xy, state.leg1_ankle_xy], 'orange')  # 咦, 我只需要关心某些点就行了
@@ -143,12 +143,18 @@ def plot_leg22(dtheta):
     plot_line([state.leg2_knee_xy, state.leg2_ankle_xy], 'cyan')  # 咦, 我只需要关心某些点就行了
     state.leg22_theta = theta
 
+# log_
+def plot_knee():
+    knee1 = plt.Circle(state.leg1_knee_xy, 40, linestyle='-', fill=False,color='green')
+    plt.gcf().gca().add_patch(knee1)
+    knee2 = plt.Circle(state.leg2_knee_xy, 40, linestyle='-', fill=False,color='green')
+    plt.gcf().gca().add_patch(knee2)
 
 def job_print_robot_walk():
     plt.figure(figsize=(7, 6), )
     plt.axes([0.12, 0.11, 0.90 / 2, 0.88])
     plt.ion()
-    perid = 10  # 秒
+    perid = 5  # 秒
     dt = 0.05
     dtheta_leg11, dtheta_leg12 = 0.0, 0.0
     print("\n开始脚脚运动模拟")
@@ -192,8 +198,12 @@ def job_print_robot_walk():
         print(f'当前时间 {t:.1f} 左膝盖xy {state.leg2_knee_xy} '
               f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
 
+        # 画出膝盖和小腿
+        plot_knee()
         plot_leg12(0)
         plot_leg22(0)
+        print(f'当前时间 {t:.1f} 左脚踝 {state.leg2_ankle_xy} 右脚踝 {state.leg1_ankle_xy}' )
+              # f'左大腿角 {state.leg11_theta} 右膝盖xy {state.leg1_knee_xy} 右大腿角 {state.leg21_theta}')
         """
         从模拟中可以看出, 只有2连杆的情况下, 足端到地面有一个 delta_height 
         那么脚面的功能就的出来了, 补足这个 delta_height
